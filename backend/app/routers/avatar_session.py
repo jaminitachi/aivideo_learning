@@ -27,6 +27,11 @@ async def create_avatar_session(request: SessionRequest):
     Returns a Daily.co room URL where the user can have a voice conversation
     with an AI English teacher that provides real-time corrections
     """
+    if not settings.TAVUS_API_KEY or not settings.TAVUS_PERSONA_ID:
+        raise HTTPException(
+            status_code=500,
+            detail="Tavus API credentials not configured. Please set TAVUS_API_KEY and TAVUS_PERSONA_ID environment variables."
+        )
     try:
         return await create_tavus_session()
     except Exception as e:
@@ -140,6 +145,11 @@ async def delete_tavus_session(conversation_id: str):
     Delete/end a Tavus conversation session
     This frees up a concurrent conversation slot
     """
+    if not settings.TAVUS_API_KEY:
+        raise HTTPException(
+            status_code=500,
+            detail="Tavus API credentials not configured. Please set TAVUS_API_KEY environment variable."
+        )
     try:
         async with httpx.AsyncClient() as client:
             response = await client.delete(
