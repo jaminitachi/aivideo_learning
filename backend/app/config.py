@@ -4,19 +4,19 @@ from functools import lru_cache
 
 class Settings(BaseSettings):
     # Database
-    database_url: str
+    DATABASE_URL: str
 
     # Tavus (Real-time AI English Teacher)
-    tavus_api_key: str
-    tavus_persona_id: str
+    TAVUS_API_KEY: str
+    TAVUS_PERSONA_ID: str
 
-    # JWT
-    secret_key: str
-    algorithm: str = "HS256"
-    access_token_expire_minutes: int = 30
+    # JWT (optional - for future authentication)
+    SECRET_KEY: str = "temp_secret_key_not_used"
+    ALGORITHM: str = "HS256"
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     # CORS
-    frontend_url: str = "http://localhost:3000"
+    FRONTEND_URL: str = "http://localhost:3000"
 
     model_config = SettingsConfigDict(
         env_file=".env",

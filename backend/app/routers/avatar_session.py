@@ -40,11 +40,11 @@ async def create_tavus_session() -> SessionResponse:
         response = await client.post(
             "https://tavusapi.com/v2/conversations",
             headers={
-                "x-api-key": settings.tavus_api_key,
+                "x-api-key": settings.TAVUS_API_KEY,
                 "Content-Type": "application/json"
             },
             json={
-                "persona_id": settings.tavus_persona_id,
+                "persona_id": settings.TAVUS_PERSONA_ID,
                 "conversation_name": "English Correction Session",
                 "audio_only": True,  # Hide user's face - voice only
                 "custom_greeting": """Hi! I'm your English teacher. I'm here to help you practice speaking English naturally and correctly.
@@ -145,7 +145,7 @@ async def delete_tavus_session(conversation_id: str):
             response = await client.delete(
                 f"https://tavusapi.com/v2/conversations/{conversation_id}",
                 headers={
-                    "x-api-key": settings.tavus_api_key
+                    "x-api-key": settings.TAVUS_API_KEY
                 },
                 timeout=30.0
             )
