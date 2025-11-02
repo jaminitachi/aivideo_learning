@@ -21,7 +21,9 @@ class Settings(BaseSettings):
     FRONTEND_URL: str = "http://localhost:3000"
 
     model_config = SettingsConfigDict(
-        env_file=".env" if os.path.exists(".env") else None,  # 로컬에 .env 있으면 사용, 없으면 환경 변수만
+        # 프로덕션(Railway)에서는 .env 파일 읽지 않음 - Railway Variables만 사용
+        # 로컬 개발 시에만 .env 파일 사용
+        env_file=".env" if os.path.exists(".env") and not os.getenv("RAILWAY_ENVIRONMENT") else None,
         env_file_encoding="utf-8",
         case_sensitive=False,
         env_ignore_empty=True
