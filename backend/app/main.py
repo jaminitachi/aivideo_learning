@@ -1,13 +1,10 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from contextlib import asynccontextmanager
-import os
 
 from app.config import get_settings
 from app.database import connect_db, disconnect_db
 from app.routers import conversation, user, progress, avatar_session
-from app.websocket.connection import router as websocket_router
 
 settings = get_settings()
 
@@ -15,8 +12,6 @@ settings = get_settings()
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Startup
-    # Create static directory for audio files
-    os.makedirs("static/audio", exist_ok=True)
     await connect_db()
     yield
     # Shutdown
@@ -30,9 +25,6 @@ app = FastAPI(
     lifespan=lifespan
 )
 
-# Mount static files directory
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -43,7 +35,6 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(websocket_router, tags=["WebSocket"])
 app.include_router(user.router, prefix="/api/users", tags=["Users"])
 app.include_router(conversation.router, prefix="/api/conversations", tags=["Conversations"])
 app.include_router(progress.router, prefix="/api/progress", tags=["Progress"])

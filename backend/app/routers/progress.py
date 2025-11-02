@@ -1,10 +1,8 @@
 from fastapi import APIRouter, HTTPException
 from app.models import ProgressResponse
 from app.database import get_db
-from app.services.correction_service import CorrectionService
 
 router = APIRouter()
-correction_service = CorrectionService()
 
 
 @router.get("/{user_id}", response_model=ProgressResponse)
@@ -44,9 +42,6 @@ async def get_user_stats(user_id: str):
         if not progress:
             raise HTTPException(status_code=404, detail="Progress not found")
 
-        # Get correction stats
-        correction_stats = await correction_service.get_correction_stats(user_id)
-
         # Get recent sessions
         recent_sessions = await db.session.find_many(
             where={"userId": user_id},
@@ -62,7 +57,6 @@ async def get_user_stats(user_id: str):
 
         return {
             "progress": progress,
-            "correction_stats": correction_stats,
             "recent_sessions": recent_sessions,
             "average_session_duration": avg_duration,
             "total_conversations": await get_total_conversations(user_id)
