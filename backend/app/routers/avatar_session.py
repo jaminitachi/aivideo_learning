@@ -72,7 +72,7 @@ async def create_tavus_session() -> SessionResponse:
             json={
                 "persona_id": tavus_persona_id,
                 "conversation_name": "English Correction Session",
-                "audio_only": True,  # Hide user's face - voice only
+                "audio_only": False,  # Show Tavus AI video avatar
                 "custom_greeting": """Hi! I'm your English teacher. I'm here to help you practice speaking English naturally and correctly.
 
 Here's how we'll work together:

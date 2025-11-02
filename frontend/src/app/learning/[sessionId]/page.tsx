@@ -15,7 +15,9 @@ export default function SimpleLearningPage() {
   const router = useRouter();
   const sessionId = params.sessionId as string;
 
-  const [avatarSession, setAvatarSession] = useState<AvatarSession | null>(null);
+  const [avatarSession, setAvatarSession] = useState<AvatarSession | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
 
@@ -28,25 +30,38 @@ export default function SimpleLearningPage() {
   useEffect(() => {
     return () => {
       if (avatarSession) {
+        // Synchronous cleanup on unmount
         deleteTavusSession(avatarSession.session_id);
       }
     };
   }, [avatarSession]);
 
-  // Handle browser close/refresh
+  // Handle browser close/refresh - DELETE 요청 보장
   useEffect(() => {
-    const handleBeforeUnload = () => {
+    const handlePageUnload = () => {
       if (avatarSession) {
-        // Use sendBeacon for reliable cleanup on page unload
-        navigator.sendBeacon(
+        // fetch with keepalive는 DELETE 메서드를 지원하므로 이를 사용
+        // pagehide 이벤트도 함께 처리하여 더 확실하게 종료
+        fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/api/avatar-sessions/tavus/${avatarSession.session_id}`,
-          JSON.stringify({})
-        );
+          {
+            method: "DELETE",
+            keepalive: true, // 페이지가 언로드되어도 요청 완료 보장
+          }
+        ).catch((err) => {
+          console.error("Failed to delete session on unload:", err);
+        });
       }
     };
 
-    window.addEventListener("beforeunload", handleBeforeUnload);
-    return () => window.removeEventListener("beforeunload", handleBeforeUnload);
+    // beforeunload와 pagehide 모두 처리
+    window.addEventListener("beforeunload", handlePageUnload);
+    window.addEventListener("pagehide", handlePageUnload);
+
+    return () => {
+      window.removeEventListener("beforeunload", handlePageUnload);
+      window.removeEventListener("pagehide", handlePageUnload);
+    };
   }, [avatarSession]);
 
   const createAvatarSession = async () => {
@@ -112,7 +127,9 @@ export default function SimpleLearningPage() {
       <div className="bg-gradient-to-r from-purple-900 to-indigo-900 border-b border-purple-700 px-6 py-4 shadow-lg">
         <div className="max-w-7xl mx-auto flex justify-between items-center">
           <div>
-            <h1 className="text-3xl font-bold text-white">English Correction Teacher</h1>
+            <h1 className="text-3xl font-bold text-white">
+              English Correction Teacher
+            </h1>
             <p className="text-sm text-purple-200 mt-1">
               🎯 Real-time correction • Voice-only practice
             </p>
@@ -133,7 +150,9 @@ export default function SimpleLearningPage() {
         {loading && (
           <div className="flex flex-col items-center justify-center h-96">
             <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500 mb-4"></div>
-            <p className="text-gray-400">Connecting to your English teacher...</p>
+            <p className="text-gray-400">
+              Connecting to your English teacher...
+            </p>
           </div>
         )}
 
@@ -157,7 +176,7 @@ export default function SimpleLearningPage() {
               <div className="aspect-video relative">
                 <iframe
                   src={avatarSession.room_url}
-                  allow="camera; microphone; fullscreen; display-capture; autoplay"
+                  allow="microphone; fullscreen; display-capture; autoplay"
                   className="w-full h-full"
                   style={{ border: "none" }}
                 />
@@ -176,45 +195,72 @@ export default function SimpleLearningPage() {
 
             {/* Instructions */}
             <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-8">
-              <h3 className="text-2xl font-bold mb-4 text-purple-200">📚 How This Works:</h3>
+              <h3 className="text-2xl font-bold mb-4 text-purple-200">
+                📚 How This Works:
+              </h3>
               <div className="grid md:grid-cols-2 gap-6 text-gray-300">
                 <div className="space-y-3">
                   <div className="flex items-start">
-                    <span className="font-bold text-purple-400 mr-3 text-xl">✓</span>
+                    <span className="font-bold text-purple-400 mr-3 text-xl">
+                      ✓
+                    </span>
                     <div>
-                      <p className="font-semibold text-white">Voice-Only Practice</p>
-                      <p className="text-sm">Your camera is off - just speak naturally!</p>
+                      <p className="font-semibold text-white">
+                        Voice-Only Practice
+                      </p>
+                      <p className="text-sm">
+                        Your camera is off - just speak naturally!
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start">
-                    <span className="font-bold text-purple-400 mr-3 text-xl">✓</span>
+                    <span className="font-bold text-purple-400 mr-3 text-xl">
+                      ✓
+                    </span>
                     <div>
-                      <p className="font-semibold text-white">Immediate Corrections</p>
-                      <p className="text-sm">Every mistake is a learning opportunity</p>
+                      <p className="font-semibold text-white">
+                        Immediate Corrections
+                      </p>
+                      <p className="text-sm">
+                        Every mistake is a learning opportunity
+                      </p>
                     </div>
                   </div>
                 </div>
                 <div className="space-y-3">
                   <div className="flex items-start">
-                    <span className="font-bold text-purple-400 mr-3 text-xl">✓</span>
+                    <span className="font-bold text-purple-400 mr-3 text-xl">
+                      ✓
+                    </span>
                     <div>
-                      <p className="font-semibold text-white">Practice & Repeat</p>
-                      <p className="text-sm">You'll be asked to say it correctly</p>
+                      <p className="font-semibold text-white">
+                        Practice & Repeat
+                      </p>
+                      <p className="text-sm">
+                        You'll be asked to say it correctly
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start">
-                    <span className="font-bold text-purple-400 mr-3 text-xl">✓</span>
+                    <span className="font-bold text-purple-400 mr-3 text-xl">
+                      ✓
+                    </span>
                     <div>
-                      <p className="font-semibold text-white">Natural Conversations</p>
-                      <p className="text-sm">Talk about topics that interest you</p>
+                      <p className="font-semibold text-white">
+                        Natural Conversations
+                      </p>
+                      <p className="text-sm">
+                        Talk about topics that interest you
+                      </p>
                     </div>
                   </div>
                 </div>
               </div>
               <div className="mt-6 p-4 bg-yellow-900/30 border border-yellow-500/50 rounded-lg">
                 <p className="text-yellow-200 text-sm">
-                  <span className="font-bold">💡 Tip:</span> Don't be afraid to make mistakes!
-                  The teacher will gently correct you and help you improve.
+                  <span className="font-bold">💡 Tip:</span> Don't be afraid to
+                  make mistakes! The teacher will gently correct you and help
+                  you improve.
                 </p>
               </div>
             </div>
