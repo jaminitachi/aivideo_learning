@@ -2,11 +2,20 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import Optional
 import httpx
+import os
 
 from app.config import get_settings
 
 router = APIRouter()
 settings = get_settings()
+
+def get_tavus_api_key() -> Optional[str]:
+    """환경 변수에서 직접 읽기 (Railway 대응)"""
+    return os.getenv("TAVUS_API_KEY") or settings.TAVUS_API_KEY
+
+def get_tavus_persona_id() -> Optional[str]:
+    """환경 변수에서 직접 읽기 (Railway 대응)"""
+    return os.getenv("TAVUS_PERSONA_ID") or settings.TAVUS_PERSONA_ID
 
 
 class SessionRequest(BaseModel):
@@ -27,7 +36,10 @@ async def create_avatar_session(request: SessionRequest):
     Returns a Daily.co room URL where the user can have a voice conversation
     with an AI English teacher that provides real-time corrections
     """
-    if not settings.TAVUS_API_KEY or not settings.TAVUS_PERSONA_ID:
+    tavus_api_key = get_tavus_api_key()
+    tavus_persona_id = get_tavus_persona_id()
+    
+    if not tavus_api_key or not tavus_persona_id:
         raise HTTPException(
             status_code=500,
             detail="Tavus API credentials not configured. Please set TAVUS_API_KEY and TAVUS_PERSONA_ID environment variables."
@@ -41,15 +53,24 @@ async def create_avatar_session(request: SessionRequest):
 
 async def create_tavus_session() -> SessionResponse:
     """Create Tavus conversation session with advanced settings"""
+    tavus_api_key = get_tavus_api_key()
+    tavus_persona_id = get_tavus_persona_id()
+    
+    if not tavus_api_key or not tavus_persona_id:
+        raise HTTPException(
+            status_code=500,
+            detail="Tavus API credentials not configured."
+        )
+    
     async with httpx.AsyncClient() as client:
         response = await client.post(
             "https://tavusapi.com/v2/conversations",
             headers={
-                "x-api-key": settings.TAVUS_API_KEY,
+                "x-api-key": tavus_api_key,
                 "Content-Type": "application/json"
             },
             json={
-                "persona_id": settings.TAVUS_PERSONA_ID,
+                "persona_id": tavus_persona_id,
                 "conversation_name": "English Correction Session",
                 "audio_only": True,  # Hide user's face - voice only
                 "custom_greeting": """Hi! I'm your English teacher. I'm here to help you practice speaking English naturally and correctly.
@@ -145,7 +166,9 @@ async def delete_tavus_session(conversation_id: str):
     Delete/end a Tavus conversation session
     This frees up a concurrent conversation slot
     """
-    if not settings.TAVUS_API_KEY:
+    tavus_api_key = get_tavus_api_key()
+    
+    if not tavus_api_key:
         raise HTTPException(
             status_code=500,
             detail="Tavus API credentials not configured. Please set TAVUS_API_KEY environment variable."
@@ -155,7 +178,7 @@ async def delete_tavus_session(conversation_id: str):
             response = await client.delete(
                 f"https://tavusapi.com/v2/conversations/{conversation_id}",
                 headers={
-                    "x-api-key": settings.TAVUS_API_KEY
+                    "x-api-key": tavus_api_key
                 },
                 timeout=30.0
             )
