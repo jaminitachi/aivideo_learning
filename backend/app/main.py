@@ -53,3 +53,15 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy"}
+    
+@app.get("/debug/env")
+async def check_env():
+    """환경 변수 설정 상태 확인 (디버그용)"""
+    import os
+    return {
+        "tavus_api_key_from_settings": bool(settings.TAVUS_API_KEY),
+        "tavus_persona_id_from_settings": bool(settings.TAVUS_PERSONA_ID),
+        "tavus_api_key_from_os": bool(os.getenv("TAVUS_API_KEY")),
+        "tavus_persona_id_from_os": bool(os.getenv("TAVUS_PERSONA_ID")),
+        "all_env_vars_with_tavus": [k for k in os.environ.keys() if "TAVUS" in k.upper()]
+    }
