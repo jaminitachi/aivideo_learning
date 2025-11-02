@@ -32,7 +32,9 @@ export default function Home() {
         if (userResponse.ok) {
           const user = await userResponse.json()
           userId = user.id
-          localStorage.setItem('test_user_id', userId)
+          if (userId) {
+            localStorage.setItem('test_user_id', userId)
+          }
         } else {
           console.error('Failed to create user:', await userResponse.text())
           alert('사용자 생성에 실패했습니다. 콘솔을 확인해주세요.')

@@ -24,15 +24,8 @@ services:
     container_name: videoengai_backend
     ports:
       - "8000:8000"
-    environment:
-      DATABASE_URL: postgresql://videoengai:videoengai_password@postgres:5432/videoengai
-      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
-      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY}
-      DID_API_KEY: ${DID_API_KEY}
-      SECRET_KEY: ${SECRET_KEY}
-      FRONTEND_URL: http://localhost:3000
-      SITE_URL: http://localhost:3000
-      SITE_NAME: VideoEngAI
+    env_file:
+      - ./backend/.env
     depends_on:
       - postgres
     networks:
