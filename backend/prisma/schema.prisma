@@ -1,0 +1,106 @@
+generator client {
+  provider             = "prisma-client-py"
+  interface            = "asyncio"
+  recursive_type_depth = 5
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String   @id @default(uuid())
+  email        String   @unique
+  name         String
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  sessions     Session[]
+  progress     Progress[]
+
+  @@map("users")
+}
+
+model Session {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  startedAt    DateTime @default(now()) @map("started_at")
+  endedAt      DateTime? @map("ended_at")
+  duration     Int?     // in seconds
+
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  conversations Conversation[]
+  corrections   Correction[]
+
+  @@map("sessions")
+  @@index([userId])
+}
+
+model Conversation {
+  id           String   @id @default(uuid())
+  sessionId    String   @map("session_id")
+  role         String   // "user" or "assistant"
+  content      String   @db.Text
+  audioUrl     String?  @map("audio_url")
+  videoUrl     String?  @map("video_url")
+  timestamp    DateTime @default(now())
+
+  session      Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  corrections  Correction[]
+
+  @@map("conversations")
+  @@index([sessionId])
+}
+
+model Correction {
+  id              String   @id @default(uuid())
+  sessionId       String   @map("session_id")
+  conversationId  String   @map("conversation_id")
+  correctionType  String   @map("correction_type") // "grammar", "pronunciation", "vocabulary"
+  originalText    String   @map("original_text") @db.Text
+  correctedText   String   @map("corrected_text") @db.Text
+  explanation     String?  @db.Text
+  severity        String   @default("medium") // "low", "medium", "high"
+  createdAt       DateTime @default(now()) @map("created_at")
+
+  session         Session  @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+
+  @@map("corrections")
+  @@index([sessionId])
+  @@index([conversationId])
+}
+
+model Progress {
+  id                    String   @id @default(uuid())
+  userId                String   @map("user_id")
+  totalSessions         Int      @default(0) @map("total_sessions")
+  totalDuration         Int      @default(0) @map("total_duration") // in seconds
+  totalCorrections      Int      @default(0) @map("total_corrections")
+  grammarScore          Float    @default(0) @map("grammar_score")
+  pronunciationScore    Float    @default(0) @map("pronunciation_score")
+  vocabularyScore       Float    @default(0) @map("vocabulary_score")
+  lastSessionDate       DateTime? @map("last_session_date")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  user                  User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId])
+  @@map("progress")
+}
+
+model PracticePhrase {
+  id           String   @id @default(uuid())
+  category     String   // "greeting", "daily", "business", etc.
+  difficulty   String   // "beginner", "intermediate", "advanced"
+  englishText  String   @map("english_text") @db.Text
+  koreanText   String   @map("korean_text") @db.Text
+  exampleAudio String?  @map("example_audio")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("practice_phrases")
+  @@index([category, difficulty])
+}

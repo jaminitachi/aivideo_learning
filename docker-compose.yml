@@ -1,0 +1,70 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:16-alpine
+    container_name: videoengai_db
+    environment:
+      POSTGRES_USER: videoengai
+      POSTGRES_PASSWORD: videoengai_password
+      POSTGRES_DB: videoengai
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - videoengai_network
+
+  # Backend (FastAPI)
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: videoengai_backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql://videoengai:videoengai_password@postgres:5432/videoengai
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY}
+      ELEVENLABS_API_KEY: ${ELEVENLABS_API_KEY}
+      DID_API_KEY: ${DID_API_KEY}
+      SECRET_KEY: ${SECRET_KEY}
+      FRONTEND_URL: http://localhost:3000
+      SITE_URL: http://localhost:3000
+      SITE_NAME: VideoEngAI
+    depends_on:
+      - postgres
+    networks:
+      - videoengai_network
+    volumes:
+      - ./backend:/app
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+
+  # Frontend (Next.js)
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: videoengai_frontend
+    ports:
+      - "3000:3000"
+    environment:
+      NEXT_PUBLIC_API_URL: http://localhost:8000
+      NEXT_PUBLIC_WS_URL: ws://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - videoengai_network
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+      - /app/.next
+    command: npm run dev
+
+volumes:
+  postgres_data:
+
+networks:
+  videoengai_network:
+    driver: bridge
