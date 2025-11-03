@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { Home } from "lucide-react";
 
@@ -20,11 +20,37 @@ export default function SimpleLearningPage() {
   );
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string>();
+  const [timeRemaining, setTimeRemaining] = useState<number>(120); // 1분 타이머 (초 단위)
+  const [sessionStartTime, setSessionStartTime] = useState<number | null>(null);
 
   // Create session on mount
   useEffect(() => {
     createAvatarSession();
   }, []);
+
+  // 1분 타이머 관리 및 자동 세션 종료
+  useEffect(() => {
+    if (!avatarSession || !sessionStartTime) return;
+
+    const interval = setInterval(async () => {
+      const elapsed = Math.floor((Date.now() - sessionStartTime) / 1000);
+      const remaining = Math.max(0, 120 - elapsed);
+      setTimeRemaining(remaining);
+
+      // 1분 경과 시 자동 종료
+      if (remaining === 0) {
+        clearInterval(interval);
+        // 자동으로 세션 종료
+        if (avatarSession) {
+          await deleteTavusSession(avatarSession.session_id);
+        }
+        setSessionStartTime(null);
+        router.push("/");
+      }
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [avatarSession, sessionStartTime, router]);
 
   // Cleanup: Delete Tavus session when component unmounts
   useEffect(() => {
@@ -90,6 +116,8 @@ export default function SimpleLearningPage() {
 
       const data: AvatarSession = await response.json();
       setAvatarSession(data);
+      setSessionStartTime(Date.now()); // 세션 시작 시간 기록
+      setTimeRemaining(120); // 타이머 초기화
     } catch (err) {
       console.error("Error creating avatar session:", err);
       setError(err instanceof Error ? err.message : "Unknown error");
@@ -113,40 +141,59 @@ export default function SimpleLearningPage() {
     }
   };
 
-  const endSession = async () => {
+  const endSession = useCallback(async () => {
     // Delete session before leaving
     if (avatarSession) {
       await deleteTavusSession(avatarSession.session_id);
     }
+    setSessionStartTime(null); // 타이머 리셋
     router.push("/");
+  }, [avatarSession, router]);
+
+  // 시간을 MM:SS 형식으로 포맷팅
+  const formatTime = (seconds: number): string => {
+    const mins = Math.floor(seconds / 60);
+    const secs = seconds % 60;
+    return `${mins}:${secs.toString().padStart(2, "0")}`;
   };
 
   return (
     <div className="min-h-screen bg-gray-900 text-white">
       {/* Header */}
-      <div className="bg-gradient-to-r from-purple-900 to-indigo-900 border-b border-purple-700 px-6 py-4 shadow-lg">
-        <div className="max-w-7xl mx-auto flex justify-between items-center">
-          <div>
-            <h1 className="text-3xl font-bold text-white">
+      <div className="bg-gradient-to-r from-purple-900 to-indigo-900 border-b border-purple-700 px-4 sm:px-6 py-3 sm:py-4 shadow-lg">
+        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div className="flex-1">
+            <h1 className="text-xl sm:text-3xl font-bold text-white">
               English Correction Teacher
             </h1>
-            <p className="text-sm text-purple-200 mt-1">
+            <p className="text-xs sm:text-sm text-purple-200 mt-1">
               🎯 Real-time correction • Voice-only practice
             </p>
           </div>
 
-          <button
-            onClick={endSession}
-            className="flex items-center space-x-2 px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg transition-colors shadow-md font-semibold"
-          >
-            <Home size={20} />
-            <span>End Session</span>
-          </button>
+          <div className="flex items-center gap-3 w-full sm:w-auto">
+            {/* 1분 타이머 표시 */}
+            {avatarSession && sessionStartTime !== null && (
+              <div className="flex items-center gap-2 px-4 py-2 bg-yellow-600/20 border border-yellow-500/50 rounded-lg">
+                <span className="text-yellow-300 text-sm sm:text-base font-mono font-semibold">
+                  ⏱️ {formatTime(timeRemaining)}
+                </span>
+              </div>
+            )}
+
+            <button
+              onClick={endSession}
+              className="flex items-center space-x-2 px-4 sm:px-6 py-2 sm:py-3 bg-red-600 hover:bg-red-700 rounded-lg transition-colors shadow-md font-semibold text-sm sm:text-base flex-1 sm:flex-initial justify-center"
+            >
+              <Home size={18} />
+              <span>End Session</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-6 py-8">
+      {/* Main Content - 모바일 반응형 패딩 */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-8">
         {loading && (
           <div className="flex flex-col items-center justify-center h-96">
             <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-purple-500 mb-4"></div>
@@ -170,38 +217,43 @@ export default function SimpleLearningPage() {
         )}
 
         {avatarSession && !loading && (
-          <div className="space-y-6">
-            {/* Video Container */}
-            <div className="bg-gray-800 rounded-2xl overflow-hidden shadow-2xl">
-              <div className="aspect-video relative">
+          <div className="space-y-4 sm:space-y-6">
+            {/* Video Container - 모바일 최적화 */}
+            <div className="bg-gray-800 rounded-xl sm:rounded-2xl overflow-hidden shadow-2xl">
+              <div className="aspect-video relative w-full">
                 <iframe
                   src={avatarSession.room_url}
                   allow="microphone; fullscreen; display-capture; autoplay;"
                   allowFullScreen
-                  className="w-full h-full"
-                  style={{ border: "none" }}
-                  // 모바일에서 전체 화면 모드 지원
+                  className="w-full h-full touch-pan-y touch-pinch-zoom"
+                  style={{ border: "none", touchAction: "manipulation" }}
                   loading="eager"
+                  title="Tavus Video Session"
                 />
               </div>
             </div>
 
             {/* Status Banner */}
-            <div className="bg-gradient-to-r from-green-800/30 to-emerald-800/30 border border-green-500/50 rounded-lg p-6">
-              <div className="flex items-center justify-center space-x-4">
-                <div className="w-4 h-4 bg-green-500 rounded-full animate-pulse shadow-lg shadow-green-500/50"></div>
-                <span className="text-green-300 text-lg font-semibold">
+            <div className="bg-gradient-to-r from-green-800/30 to-emerald-800/30 border border-green-500/50 rounded-lg p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-2 sm:gap-4">
+                <div className="w-3 h-3 sm:w-4 sm:h-4 bg-green-500 rounded-full animate-pulse shadow-lg shadow-green-500/50"></div>
+                <span className="text-green-300 text-sm sm:text-lg font-semibold text-center">
                   🎙️ Session Active - Speak freely!
                 </span>
+                {timeRemaining <= 10 && timeRemaining > 0 && (
+                  <span className="text-yellow-300 text-sm sm:text-base font-semibold animate-pulse">
+                    ⚠️ {timeRemaining}초 남았습니다
+                  </span>
+                )}
               </div>
             </div>
 
             {/* Instructions */}
-            <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-8">
-              <h3 className="text-2xl font-bold mb-4 text-purple-200">
+            <div className="bg-purple-900/20 border border-purple-500/30 rounded-lg p-4 sm:p-6 md:p-8">
+              <h3 className="text-xl sm:text-2xl font-bold mb-3 sm:mb-4 text-purple-200">
                 📚 How This Works:
               </h3>
-              <div className="grid md:grid-cols-2 gap-6 text-gray-300">
+              <div className="grid md:grid-cols-2 gap-4 sm:gap-6 text-gray-300">
                 <div className="space-y-3">
                   <div className="flex items-start">
                     <span className="font-bold text-purple-400 mr-3 text-xl">
@@ -259,11 +311,15 @@ export default function SimpleLearningPage() {
                   </div>
                 </div>
               </div>
-              <div className="mt-6 p-4 bg-yellow-900/30 border border-yellow-500/50 rounded-lg">
-                <p className="text-yellow-200 text-sm">
+              <div className="mt-4 sm:mt-6 p-3 sm:p-4 bg-yellow-900/30 border border-yellow-500/50 rounded-lg">
+                <p className="text-yellow-200 text-xs sm:text-sm">
                   <span className="font-bold">💡 Tip:</span> Don't be afraid to
                   make mistakes! The teacher will gently correct you and help
                   you improve.
+                </p>
+                <p className="text-yellow-200 text-xs sm:text-sm mt-2">
+                  <span className="font-bold">⏰ Note:</span> This session will
+                  automatically end after 2 minute.
                 </p>
               </div>
             </div>

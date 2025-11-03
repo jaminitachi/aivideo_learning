@@ -108,7 +108,7 @@ YOUR PERSONALITY:
 
 Keep your explanations concise but thorough. Always prioritize correction over conversation flow - it's more important that they learn the right way than that the conversation feels smooth.""",
                 "properties": {
-                    "max_call_duration": 1800,  # 30 minutes
+                    "max_call_duration": 120,  # 1 minute (모바일 최적화)
                     "enable_recording": False,  # Privacy
                     "enable_closed_captions": True,  # Helps learning
                     "language": "english",  # Full language name, not ISO code
