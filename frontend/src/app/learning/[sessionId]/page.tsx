@@ -176,9 +176,12 @@ export default function SimpleLearningPage() {
               <div className="aspect-video relative">
                 <iframe
                   src={avatarSession.room_url}
-                  allow="microphone; fullscreen; display-capture; autoplay"
+                  allow="microphone; fullscreen; display-capture; autoplay;"
+                  allowFullScreen
                   className="w-full h-full"
                   style={{ border: "none" }}
+                  // 모바일에서 전체 화면 모드 지원
+                  loading="eager"
                 />
               </div>
             </div>
